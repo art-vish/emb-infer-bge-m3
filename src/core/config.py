@@ -9,7 +9,7 @@ if dotenv_path.exists():
         load_dotenv(dotenv_path=dotenv_path)
         # Will be logged after logging setup
     except UnicodeDecodeError:
-        # Will be logged after logging setup
+        pass  # Will be logged after logging setup
 else:
     # Попробуем загрузить из env в корне проекта
     alt_dotenv_path = Path('env')
@@ -18,9 +18,9 @@ else:
             load_dotenv(dotenv_path=alt_dotenv_path)
             # Will be logged after logging setup
         except UnicodeDecodeError:
-            # Will be logged after logging setup
+            pass  # Will be logged after logging setup
     else:
-        # Will be logged after logging setup
+        pass  # Will be logged after logging setup
 
 # Constants - using environment variables
 LOCAL_MODEL_PATH = os.environ.get("MODEL_PATH", "./BGE-M3")  # Local path to BGE-M3 model
