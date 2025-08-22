@@ -7,6 +7,9 @@ import numpy as np
 
 from src.core.config import LOCAL_MODEL_PATH, MODEL_NAME
 from src.models.schemas import EmbeddingRequest, BGEEmbeddingData, BGEEmbeddingResponse
+from src.core.logging_config import get_logger
+
+logger = get_logger("model_service")
 
 def clear_gpu_memory():
     """Clear GPU memory cache."""
@@ -20,21 +23,21 @@ async def load_model():
     """Load the BGE-M3 model at startup."""
     from FlagEmbedding import BGEM3FlagModel
     
-    print("Loading BGE-M3 model...")
+    logger.info("Starting BGE-M3 model loading", extra={"model_name": MODEL_NAME})
     start_load_time = time.time()
     clear_gpu_memory()
 
     try:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Using device: {device}")
+        logger.info("Device selected for model", extra={"device": device})
         
         # Check if local path contains model files
         config_path = os.path.join(LOCAL_MODEL_PATH, "config.json")
         if os.path.exists(config_path):
-            print(f"Loading model from local path: {LOCAL_MODEL_PATH}")
+            logger.info("Loading model from local path", extra={"path": LOCAL_MODEL_PATH})
             model_path = LOCAL_MODEL_PATH
         else:
-            print("Local model not found, loading from Hugging Face: BAAI/bge-m3")
+            logger.info("Local model not found, downloading from Hugging Face", extra={"model": "BAAI/bge-m3"})
             model_path = "BAAI/bge-m3"
         
         # Load the BGE-M3 model
@@ -45,12 +48,15 @@ async def load_model():
         )
         
         load_time = time.time() - start_load_time
-        print(f"BGE-M3 model loaded successfully in {load_time:.2f} seconds on {device}!")
-        print(f"Model will be served as: {MODEL_NAME}")
+        logger.info("BGE-M3 model loaded successfully", extra={
+            "load_time": round(load_time, 2),
+            "device": device,
+            "model_name": MODEL_NAME
+        })
         
         return encoder
     except Exception as e:
-        print(f"Error loading BGE-M3 model: {e}")
+        logger.error("Failed to load BGE-M3 model", extra={"error": str(e)}, exc_info=True)
         raise
 
 
@@ -152,7 +158,11 @@ async def process_bge_embeddings(request: EmbeddingRequest, encoder):
         
         compute_time = time.time() - start_time
         vector_types_str = "+".join(requested_types)
-        print(f"Generated {len(data)} BGE-M3 embeddings ({vector_types_str}) in {compute_time:.2f}s")
+        logger.info("BGE-M3 embeddings generated", extra={
+            "count": len(data),
+            "vector_types": vector_types_str,
+            "compute_time": round(compute_time, 2)
+        })
         
         return BGEEmbeddingResponse(
             data=data,
@@ -164,5 +174,5 @@ async def process_bge_embeddings(request: EmbeddingRequest, encoder):
             embedding_types=requested_types
         )
     except Exception as e:
-        print(f"Error generating BGE embeddings: {e}")
+        logger.error("Failed to generate BGE embeddings", extra={"error": str(e)}, exc_info=True)
         raise

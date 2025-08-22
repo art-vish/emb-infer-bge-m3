@@ -7,20 +7,20 @@ dotenv_path = Path('.env')
 if dotenv_path.exists():
     try:
         load_dotenv(dotenv_path=dotenv_path)
-        print("Loaded .env file successfully")
+        # Will be logged after logging setup
     except UnicodeDecodeError:
-        print("Warning: .env file has encoding issues, skipping and using system environment variables")
+        # Will be logged after logging setup
 else:
     # Попробуем загрузить из env в корне проекта
     alt_dotenv_path = Path('env')
     if alt_dotenv_path.exists():
         try:
             load_dotenv(dotenv_path=alt_dotenv_path)
-            print("Loaded env file successfully")
+            # Will be logged after logging setup
         except UnicodeDecodeError:
-            print("Warning: env file has encoding issues, using system environment variables")
+            # Will be logged after logging setup
     else:
-        print("Info: No .env file found, using system environment variables")
+        # Will be logged after logging setup
 
 # Constants - using environment variables
 LOCAL_MODEL_PATH = os.environ.get("MODEL_PATH", "./BGE-M3")  # Local path to BGE-M3 model
@@ -33,12 +33,26 @@ PROCESSING_CONCURRENCY = int(os.environ.get("PROCESSING_CONCURRENCY", 2))
 BATCH_SIZE = int(os.environ.get("BATCH_SIZE", 8))  # Max requests per batch
 BATCH_TIMEOUT_MS = int(os.environ.get("BATCH_TIMEOUT_MS", 100))  # Max wait time for batch formation (ms)
 
-# Для отладки
-print(f"Loaded configuration:")
-print(f"MODEL_PATH: {LOCAL_MODEL_PATH}")
-print(f"MODEL_NAME: {MODEL_NAME}")
-print(f"API_TOKEN: {'***' + API_TOKEN[-4:] if len(API_TOKEN) > 4 else 'Not set properly'}")
-print(f"MAX_QUEUE_SIZE: {MAX_QUEUE_SIZE}")
-print(f"PROCESSING_CONCURRENCY: {PROCESSING_CONCURRENCY}")
-print(f"BATCH_SIZE: {BATCH_SIZE}")
-print(f"BATCH_TIMEOUT_MS: {BATCH_TIMEOUT_MS}ms") 
+# Logging configuration
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")  # DEBUG, INFO, WARNING, ERROR
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "json")  # json or text
+USE_JSON_LOGGING = LOG_FORMAT.lower() == "json"
+
+# Initialize structured logging
+from src.core.logging_config import setup_logging, get_logger
+
+setup_logging(log_level=LOG_LEVEL, use_json=USE_JSON_LOGGING)
+logger = get_logger("config")
+
+# Log configuration (replacing print statements)
+logger.info("Configuration loaded successfully", extra={
+    "model_path": LOCAL_MODEL_PATH,
+    "model_name": MODEL_NAME,
+    "api_token_set": API_TOKEN != "default_token_change_me",
+    "max_queue_size": MAX_QUEUE_SIZE,
+    "processing_concurrency": PROCESSING_CONCURRENCY,
+    "batch_size": BATCH_SIZE,
+    "batch_timeout_ms": BATCH_TIMEOUT_MS,
+    "log_level": LOG_LEVEL,
+    "log_format": LOG_FORMAT
+}) 

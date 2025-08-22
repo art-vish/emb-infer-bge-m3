@@ -8,39 +8,49 @@ from src.services.model_service import load_model, clear_gpu_memory
 from src.services.batch_service import batch_processor
 from src.api.routes import router
 from src.core.config import MODEL_NAME, API_TOKEN, MAX_QUEUE_SIZE, BATCH_SIZE, BATCH_TIMEOUT_MS
+from src.core.logging_config import get_logger
+
+logger = get_logger("main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Печать информации о конфигурации
-    print("\n--- API Configuration ---")
-    print(f"API_TOKEN is {'properly set' if API_TOKEN != 'default_token_change_me' else 'using default value - CHANGE THIS!'}")
-    print(f"MODEL_NAME: {MODEL_NAME}")
-    print(f"MAX_QUEUE_SIZE: {MAX_QUEUE_SIZE}")
-    print(f"BATCHING: enabled (size={BATCH_SIZE}, timeout={BATCH_TIMEOUT_MS}ms)")
-    print("-------------------------\n")
+    # Log API configuration
+    logger.info("Starting BGE-M3 API", extra={
+        "api_token_set": API_TOKEN != "default_token_change_me",
+        "model_name": MODEL_NAME,
+        "max_queue_size": MAX_QUEUE_SIZE,
+        "batch_size": BATCH_SIZE,
+        "batch_timeout_ms": BATCH_TIMEOUT_MS
+    })
     
     # Load the model at startup
+    logger.info("Loading BGE-M3 model", extra={"model_name": MODEL_NAME})
     app.state.encoder = await load_model()
+    logger.info("BGE-M3 model loaded successfully")
     
     # Start the batch processor
     app.state.batch_timeout_task = asyncio.create_task(batch_processor.start_timeout_processor())
-    print(f"Batch processor initialized")
+    logger.info("Batch processor initialized", extra={
+        "batch_size": BATCH_SIZE,
+        "timeout_ms": BATCH_TIMEOUT_MS
+    })
     
     yield  # API is ready to serve requests
 
     # Clean up resources on shutdown
-    print("Releasing resources...")
+    logger.info("Shutting down API - releasing resources")
     if hasattr(app.state, "batch_timeout_task"):
         app.state.batch_timeout_task.cancel()
         try:
             await app.state.batch_timeout_task
         except asyncio.CancelledError:
-            pass
+            logger.debug("Batch timeout task cancelled successfully")
     
     if hasattr(app.state, "encoder") and app.state.encoder is not None:
         del app.state.encoder
+        logger.debug("Model removed from memory")
     clear_gpu_memory()
-    print("Resources released.")
+    logger.info("API shutdown complete - resources released")
     
 app = FastAPI(
     lifespan=lifespan,
