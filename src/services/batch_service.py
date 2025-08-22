@@ -6,6 +6,9 @@ from fastapi import HTTPException, status
 
 from src.core.config import BATCH_SIZE, BATCH_TIMEOUT_MS, MAX_QUEUE_SIZE
 from src.models.schemas import EmbeddingRequest, BGEEmbeddingResponse
+from src.core.logging_config import get_logger
+
+logger = get_logger("batch_service")
 
 @dataclass
 class BatchItem:
@@ -28,9 +31,21 @@ class BatchProcessor:
             "avg_batch_size": 0,
             "last_batch_time": 0
         }
+        # Graceful shutdown support
+        self.is_shutting_down = False
+        self.shutdown_timeout = 30.0  # seconds
+        self.active_batches = set()  # Track active batch processing
     
     async def add_request(self, request: EmbeddingRequest, process_func: Callable) -> Any:
         """Добавляет запрос в батч и возвращает результат"""
+        # Check if we're shutting down
+        if self.is_shutting_down:
+            logger.warning("Rejecting new request during shutdown")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service is shutting down, please try again later"
+            )
+        
         # Нормализуем входные данные
         if isinstance(request.input, str):
             inputs = [request.input]
@@ -92,9 +107,17 @@ class BatchProcessor:
     
     async def _process_batch(self, batch: List[BatchItem], process_func: Callable):
         """Обрабатывает батч запросов"""
-        async with self.processing_semaphore:
-            try:
+        batch_id = id(batch)
+        self.active_batches.add(batch_id)
+        
+        try:
+            async with self.processing_semaphore:
                 start_time = time.time()
+                logger.info("Processing batch started", extra={
+                    "batch_id": batch_id,
+                    "batch_size": len(batch),
+                    "total_texts": sum(len(item.request.input) for item in batch)
+                })
                 
                 # Собираем все тексты в один большой запрос
                 all_texts = []
@@ -171,14 +194,24 @@ class BatchProcessor:
                 self.stats["avg_batch_size"] = self.stats["total_requests"] / self.stats["total_batches"]
                 self.stats["last_batch_time"] = batch_time
                 
-                print(f"✅ Batch processed: {len(batch)} requests in {batch_time:.2f}s")
+                logger.info("Batch processing completed", extra={
+                    "batch_id": batch_id,
+                    "batch_size": len(batch),
+                    "processing_time": round(batch_time, 2)
+                })
                 
-            except Exception as e:
-                print(f"Error processing batch: {e}")
-                # Уведомляем все запросы об ошибке
-                for item in batch:
-                    if not item.future.done():
-                        item.future.set_exception(e)
+        except Exception as e:
+            logger.error("Batch processing failed", extra={
+                "batch_id": batch_id,
+                "error": str(e)
+            }, exc_info=True)
+            # Уведомляем все запросы об ошибке
+            for item in batch:
+                if not item.future.done():
+                    item.future.set_exception(e)
+        finally:
+            # Remove from active batches
+            self.active_batches.discard(batch_id)
     
     async def start_timeout_processor(self):
         """Запускает процессор таймаутов для обработки неполных батчей"""
@@ -202,8 +235,54 @@ class BatchProcessor:
                         asyncio.create_task(self._process_batch(batch_to_process, process_bge_embeddings))
                         
             except Exception as e:
-                print(f"Error in timeout processor: {e}")
+                logger.error("Error in timeout processor", extra={"error": str(e)}, exc_info=True)
                 await asyncio.sleep(1)
+    
+    async def graceful_shutdown(self):
+        """Gracefully shutdown the batch processor"""
+        logger.info("Starting graceful shutdown", extra={
+            "pending_requests": len(self.pending_requests),
+            "active_batches": len(self.active_batches),
+            "shutdown_timeout": self.shutdown_timeout
+        })
+        
+        # Stop accepting new requests
+        self.is_shutting_down = True
+        
+        # Process remaining requests in queue
+        if self.pending_requests:
+            logger.info("Processing remaining requests in queue", extra={
+                "remaining_count": len(self.pending_requests)
+            })
+            
+            async with self.batch_lock:
+                if self.pending_requests:
+                    batch_to_process = self.pending_requests[:]
+                    self.pending_requests.clear()
+                    
+                    # Process final batch
+                    from src.services.model_service import process_bge_embeddings
+                    await self._process_batch(batch_to_process, process_bge_embeddings)
+        
+        # Wait for active batches to complete
+        if self.active_batches:
+            logger.info("Waiting for active batches to complete", extra={
+                "active_count": len(self.active_batches)
+            })
+            
+            start_time = time.time()
+            while self.active_batches and (time.time() - start_time) < self.shutdown_timeout:
+                await asyncio.sleep(0.1)
+            
+            if self.active_batches:
+                logger.warning("Some batches did not complete within timeout", extra={
+                    "remaining_batches": len(self.active_batches),
+                    "timeout": self.shutdown_timeout
+                })
+            else:
+                logger.info("All active batches completed successfully")
+        
+        logger.info("Graceful shutdown completed")
 
 # Глобальный экземпляр процессора батчей
 batch_processor = BatchProcessor()

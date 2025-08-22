@@ -38,7 +38,15 @@ async def lifespan(app: FastAPI):
     yield  # API is ready to serve requests
 
     # Clean up resources on shutdown
-    logger.info("Shutting down API - releasing resources")
+    logger.info("Shutting down API - starting graceful shutdown")
+    
+    # Graceful shutdown of batch processor
+    try:
+        await batch_processor.graceful_shutdown()
+    except Exception as e:
+        logger.error("Error during batch processor shutdown", extra={"error": str(e)}, exc_info=True)
+    
+    # Cancel timeout task
     if hasattr(app.state, "batch_timeout_task"):
         app.state.batch_timeout_task.cancel()
         try:
@@ -46,6 +54,7 @@ async def lifespan(app: FastAPI):
         except asyncio.CancelledError:
             logger.debug("Batch timeout task cancelled successfully")
     
+    # Clean up model
     if hasattr(app.state, "encoder") and app.state.encoder is not None:
         del app.state.encoder
         logger.debug("Model removed from memory")
