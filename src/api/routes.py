@@ -78,8 +78,9 @@ async def root():
         "endpoints": {
             "embeddings": "/v1/embeddings",     # BGE-M3 selective vectors
             "models": "/v1/models",
-            "health": "/health",
-            "stats": "/stats"
+            "health": "/health",                # Simple health check
+            "health_detailed": "/health/detailed", # Detailed health with auth
+            "stats": "/stats"                   # Batch statistics
         },
         "supported_vectors": ["dense", "sparse", "colbert"],
         "batching": {
@@ -92,30 +93,42 @@ async def root():
 
 @router.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Simple health check endpoint for load balancers and orchestrators."""
+    return {"status": "ok"}
+
+@router.get("/health/detailed")
+async def detailed_health_check(token: str = Depends(verify_token)):
+    """Detailed health check with model and batch statistics."""
     from src.main import app
     
-    if not hasattr(app.state, "encoder") or app.state.encoder is None:
-        return {
-            "status": "error",
-            "message": "Model not loaded",
-            "timestamp": time.time()
-        }
+    # Check model status
+    model_status = "loaded" if (hasattr(app.state, "encoder") and app.state.encoder is not None) else "not_loaded"
     
+    # Get batch statistics
     batch_stats = get_batch_stats()
     
-    return {
-        "status": "ok",
-        "model": MODEL_NAME,
+    health_info = {
+        "status": "ok" if model_status == "loaded" else "degraded",
+        "timestamp": time.time(),
+        "model": {
+            "name": MODEL_NAME,
+            "status": model_status
+        },
         "batching": {
             "enabled": True,
             "batch_size": BATCH_SIZE,
             "timeout_ms": BATCH_TIMEOUT_MS,
             "max_queue_size": MAX_QUEUE_SIZE,
             "stats": batch_stats
-        },
-        "timestamp": time.time()
+        }
     }
+    
+    logger.info("Detailed health check requested", extra={
+        "model_status": model_status,
+        "batch_stats": batch_stats
+    })
+    
+    return health_info
 
 @router.get("/stats")
 async def get_stats():
