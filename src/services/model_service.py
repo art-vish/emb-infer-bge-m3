@@ -4,6 +4,7 @@ import gc
 import torch
 import asyncio
 import numpy as np
+from fastapi import HTTPException, status
 
 from src.core.config import LOCAL_MODEL_PATH, MODEL_NAME
 from src.models.schemas import EmbeddingRequest, BGEEmbeddingData, BGEEmbeddingResponse
@@ -97,7 +98,16 @@ async def process_bge_embeddings(request: EmbeddingRequest, encoder):
         
         # Validate that at least one vector type is requested
         if not any([return_dense, return_sparse, return_colbert]):
-            raise ValueError("At least one vector type must be requested (return_dense, return_sparse, or return_colbert)")
+            logger.warning("Request with all vector types disabled", extra={
+                "return_dense": return_dense,
+                "return_sparse": return_sparse, 
+                "return_colbert": return_colbert,
+                "input_count": len(inputs)
+            })
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one vector type must be requested. Set return_dense=true, return_sparse=true, or return_colbert=true."
+            )
         
         # Generate all embeddings (BGE-M3 always generates all types)
         start_time = time.time()

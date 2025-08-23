@@ -52,6 +52,22 @@ def test_embedding_endpoint_basic():
     assert "data" in data
     assert len(data["data"]) > 0
 
+def test_all_vectors_disabled():
+    """Test that all vectors disabled returns 400 Bad Request"""
+    payload = {
+        "input": ["Test text"],
+        "return_dense": False,
+        "return_sparse": False,
+        "return_colbert": False
+    }
+    
+    response = requests.post(f"{BASE_URL}/v1/embeddings", headers=HEADERS, json=payload)
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}: {response.text}"
+    
+    data = response.json()
+    assert "detail" in data
+    assert "At least one vector type must be requested" in data["detail"]
+
 def _test_embedding_endpoint(test_name, payload):
     """Test embedding endpoint with specific payload"""
     print(f"\n🧪 {test_name}")
