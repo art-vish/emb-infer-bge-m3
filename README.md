@@ -20,11 +20,30 @@
 - NVIDIA GPU (опционально, для ускорения)
 - 8+ GB RAM (для загрузки BGE-M3 модели)
 
-## Быстрый старт
+## 🚀 Быстрый старт
+
+### Вариант 1: Готовый образ (Рекомендуется)
+
+1. **Скачайте production конфигурацию**:
+   ```bash
+   curl -O https://raw.githubusercontent.com/art-vish/emb-infer-bge-m3/main/docker-compose.prod.yaml
+   ```
+
+2. **Настройте API токен** (опционально):
+   ```bash
+   export API_TOKEN="your_secure_api_token_here"
+   ```
+
+3. **Запустите сервис**:
+   ```bash
+   docker-compose -f docker-compose.prod.yaml up -d
+   ```
+
+### Вариант 2: Сборка из исходного кода
 
 1. **Клонируйте репозиторий**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/art-vish/emb-infer-bge-m3.git
    cd emb-infer-bge-m3
    ```
 
@@ -39,10 +58,10 @@
    docker-compose up -d
    ```
 
-4. **Проверьте работу**:
-   ```bash
-   curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/health
-   ```
+### Проверка работы
+```bash
+curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/health
+```
 
 ## API Документация
 
@@ -485,3 +504,43 @@ docker-compose up -d
 - **ColBERT vectors**: Multi-vector representations for fine-grained matching
 
 Perfect for hybrid search combining semantic and lexical approaches!
+
+## 🐳 Docker Hub
+
+Готовый образ доступен на Docker Hub:
+
+- **Repository**: [`asvishnya/emb-infer-bge-m3`](https://hub.docker.com/r/asvishnya/emb-infer-bge-m3)
+- **Latest**: `asvishnya/emb-infer-bge-m3:latest`
+- **Stable**: `asvishnya/emb-infer-bge-m3:v1.0.0`
+
+### Быстрый запуск с Docker Hub:
+
+```bash
+# Скачать и запустить одной командой
+docker run -d \
+  -p 8000:8000 \
+  -e API_TOKEN=your_api_token_here \
+  -v ~/.cache/huggingface:/root/.cache/huggingface \
+  --gpus all \
+  asvishnya/emb-infer-bge-m3:latest
+```
+
+### Или с docker-compose:
+
+```bash
+# Скачать production конфигурацию
+curl -O https://raw.githubusercontent.com/art-vish/emb-infer-bge-m3/main/docker-compose.prod.yaml
+
+# Запустить
+docker-compose -f docker-compose.prod.yaml up -d
+```
+
+**Преимущества готового образа:**
+- ✅ Быстрый запуск без сборки
+- ✅ Проверенная стабильная версия  
+- ✅ Автоматические обновления
+- ✅ Меньше требований к системе
+
+---
+
+*Built with ❤️ using FastAPI, BGE-M3, and Docker*
