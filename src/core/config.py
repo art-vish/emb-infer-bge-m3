@@ -25,7 +25,7 @@ else:
 # Constants - using environment variables
 LOCAL_MODEL_PATH = os.environ.get("MODEL_PATH", "./BGE-M3")  # Local path to BGE-M3 model
 MODEL_NAME = os.environ.get("MODEL_NAME", "BAAI/bge-m3")  # BGE-M3 model name
-API_TOKEN = os.environ.get("API_TOKEN", "default_token_change_me")
+API_TOKEN = os.environ.get("API_TOKEN", "your_api_token_here")
 MAX_QUEUE_SIZE = int(os.environ.get("MAX_QUEUE_SIZE", 50))
 PROCESSING_CONCURRENCY = int(os.environ.get("PROCESSING_CONCURRENCY", 2))
 
@@ -48,7 +48,7 @@ logger = get_logger("config")
 logger.info("Configuration loaded successfully", extra={
     "model_path": LOCAL_MODEL_PATH,
     "model_name": MODEL_NAME,
-    "api_token_set": API_TOKEN != "default_token_change_me",
+    "api_token_set": API_TOKEN != "your_api_token_here",
     "max_queue_size": MAX_QUEUE_SIZE,
     "processing_concurrency": PROCESSING_CONCURRENCY,
     "batch_size": BATCH_SIZE,

@@ -41,7 +41,7 @@
 
 4. **Проверьте работу**:
    ```bash
-   curl -H "Authorization: Bearer your_token" http://localhost:8000/health
+   curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/health
    ```
 
 ## API Документация
@@ -50,7 +50,7 @@
 
 Все эндпоинты требуют Bearer токен в заголовке:
 ```
-Authorization: Bearer your_secure_token_here
+Authorization: Bearer your_api_token_here
 ```
 
 ### Основной эндпоинт
@@ -77,7 +77,7 @@ Authorization: Bearer your_secure_token_here
 import requests
 
 headers = {
-    "Authorization": "Bearer your_secure_token_here",
+    "Authorization": "Bearer your_api_token_here",
     "Content-Type": "application/json"
 }
 
@@ -184,7 +184,7 @@ print(f"Типы векторов: {result['embedding_types']}")
 
 ```bash
 # SECURITY SETTINGS
-API_TOKEN=your_very_secure_production_token_2024
+API_TOKEN=your_api_token_here
 
 # MODEL CONFIGURATION  
 MODEL_PATH=/app/BGE-M3
@@ -214,10 +214,10 @@ docker-compose up -d
 
 ```bash
 # Проверка здоровья
-curl -H "Authorization: Bearer $API_TOKEN" http://localhost:8000/health
+curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/health
 
 # Статистика батчинга
-curl -H "Authorization: Bearer $API_TOKEN" http://localhost:8000/stats
+curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/stats
 
 # Мониторинг ресурсов контейнера
 docker stats
@@ -410,7 +410,7 @@ Containerized FastAPI application for production deployment of BGE-M3 model with
 
 4. **Test API**:
    ```bash
-   curl -H "Authorization: Bearer your_token" http://localhost:8000/health
+   curl -H "Authorization: Bearer your_api_token_here" http://localhost:8000/health
    ```
 
 ## API Reference
@@ -430,7 +430,7 @@ Supports selective vector generation via parameters:
 import requests
 
 headers = {
-    "Authorization": "Bearer your_secure_token_here",
+    "Authorization": "Bearer your_api_token_here",
     "Content-Type": "application/json"
 }
 
@@ -469,7 +469,7 @@ response = requests.post(
 
 ```bash
 # Set production environment
-export API_TOKEN="your_secure_production_token"
+export API_TOKEN="your_api_token_here"
 export BATCH_SIZE=16
 export PROCESSING_CONCURRENCY=4
 export MAX_QUEUE_SIZE=100

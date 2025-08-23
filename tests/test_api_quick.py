@@ -15,7 +15,7 @@ load_dotenv()
 
 # Configuration
 BASE_URL = "http://localhost:8000"
-API_TOKEN = os.getenv("API_TOKEN", "test_token_bge_m3_2024")
+API_TOKEN = os.getenv("API_TOKEN", "your_api_token_here")
 
 HEADERS = {
     "Content-Type": "application/json",

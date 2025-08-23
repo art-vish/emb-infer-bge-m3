@@ -16,7 +16,7 @@ logger = get_logger("main")
 async def lifespan(app: FastAPI):
     # Log API configuration
     logger.info("Starting BGE-M3 API", extra={
-        "api_token_set": API_TOKEN != "default_token_change_me",
+        "api_token_set": API_TOKEN != "your_api_token_here",
         "model_name": MODEL_NAME,
         "max_queue_size": MAX_QUEUE_SIZE,
         "batch_size": BATCH_SIZE,
