@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: emb-infer-bge-m3
+  namespace: ml-services
+  labels:
+    app: emb-infer-bge-m3
+spec:
+  type: ClusterIP
+  selector:
+    app: emb-infer-bge-m3
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+

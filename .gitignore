@@ -47,6 +47,8 @@ venv/
 env/
 ENV/
 .env
+.env.local
+.env.*.local
 .venv
 env.bak/
 venv.bak/
@@ -70,6 +72,10 @@ yarn-error.log*
 # Model files - часто большие, могут быть добавлены опционально
 /FRIDA/*
 !/FRIDA/.gitkeep
+
+# Kubernetes secrets (never commit!)
+k8s/secret.yaml
+k8s/*-secret.yaml
 
 # Прочие
 .coverage

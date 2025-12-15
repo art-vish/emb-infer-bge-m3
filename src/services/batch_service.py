@@ -4,7 +4,7 @@ from typing import List, Tuple, Any, Callable
 from dataclasses import dataclass
 from fastapi import HTTPException, status
 
-from src.core.config import BATCH_SIZE, BATCH_TIMEOUT_MS, MAX_QUEUE_SIZE
+from src.core.config import BATCH_SIZE, BATCH_TIMEOUT_MS, MAX_QUEUE_SIZE, PROCESSING_CONCURRENCY
 from src.models.schemas import EmbeddingRequest, BGEEmbeddingResponse
 from src.core.logging_config import get_logger
 
@@ -24,7 +24,7 @@ class BatchProcessor:
     def __init__(self):
         self.pending_requests: List[BatchItem] = []
         self.batch_lock = asyncio.Lock()
-        self.processing_semaphore = asyncio.Semaphore(2)  # Параллельная обработка батчей
+        self.processing_semaphore = asyncio.Semaphore(PROCESSING_CONCURRENCY)  # Параллельная обработка батчей
         self.stats = {
             "total_batches": 0,
             "total_requests": 0,
@@ -130,7 +130,7 @@ class BatchProcessor:
                     current_index += len(item.request.input)
                     request_boundaries.append((start_idx, current_index))
                 
-                print(f"🔄 Processing batch: {len(batch)} requests, {len(all_texts)} texts total")
+                logger.info("Processing batch", extra={"batch_size": len(batch), "total_texts": len(all_texts)})
                 
                 # Создаем объединенный запрос, сохраняя параметры селективной генерации
                 first_request = batch[0].request
@@ -184,7 +184,7 @@ class BatchProcessor:
                         
                         item.future.set_result(individual_result)
                     except Exception as e:
-                        print(f"Error processing individual result {i}: {e}")
+                        logger.error("Error processing individual result", extra={"index": i, "error": str(e)})
                         item.future.set_exception(e)
                 
                 # Обновляем статистику
@@ -227,7 +227,7 @@ class BatchProcessor:
                         batch_to_process = self.pending_requests[:]
                         self.pending_requests.clear()
                         
-                        print(f"⏰ Timeout batch: {len(batch_to_process)} requests")
+                        logger.info("Timeout batch triggered", extra={"batch_size": len(batch_to_process)})
                         
                         # Определяем функцию обработки по типу первого запроса
                         # Используем BGE по умолчанию для таймаут батчей

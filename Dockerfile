@@ -27,6 +27,5 @@ ENV MODEL_PATH=/app/BGE-M3
 ENV MODEL_NAME=BAAI/bge-m3
 ENV PYTHONUNBUFFERED=1
 
-# Check if .env exists, and copy from .env.example if not
-CMD if [ ! -f .env ]; then echo "No .env file found, copying from .env.example..."; cp -n .env.example .env; fi && \
-    uvicorn src.main:app --host 0.0.0.0 --port 8000 
+# Start application
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"] 

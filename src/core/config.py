@@ -25,7 +25,9 @@ else:
 # Constants - using environment variables
 LOCAL_MODEL_PATH = os.environ.get("MODEL_PATH", "./BGE-M3")  # Local path to BGE-M3 model
 MODEL_NAME = os.environ.get("MODEL_NAME", "BAAI/bge-m3")  # BGE-M3 model name
-API_TOKEN = os.environ.get("API_TOKEN", "your_api_token_here")
+API_TOKEN = os.environ.get("API_TOKEN")
+if not API_TOKEN or API_TOKEN == "your_api_token_here":
+    raise ValueError("API_TOKEN environment variable must be set to a secure value. Please set it in .env file or environment.")
 MAX_QUEUE_SIZE = int(os.environ.get("MAX_QUEUE_SIZE", 50))
 PROCESSING_CONCURRENCY = int(os.environ.get("PROCESSING_CONCURRENCY", 2))
 

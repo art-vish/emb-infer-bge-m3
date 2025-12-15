@@ -1,6 +1,7 @@
 """
 Text validation utilities for BGE-M3 model
 """
+import os
 import re
 from typing import List, Union
 from fastapi import HTTPException, status
@@ -12,6 +13,7 @@ logger = get_logger("text_validator")
 MAX_TOKEN_LENGTH = 8192  # BGE-M3 maximum token length
 MAX_CHAR_LENGTH = 32768  # Rough estimate: ~4 chars per token
 MIN_CHAR_LENGTH = 1      # Minimum text length
+MAX_BATCH_SIZE = int(os.environ.get("MAX_BATCH_SIZE", 100))  # Maximum texts in one request
 
 # Rough token estimation (more accurate would require tokenizer)
 CHARS_PER_TOKEN_ESTIMATE = 4
@@ -104,6 +106,13 @@ class TextValidator:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Input must be string or list of strings, got {type(texts).__name__}"
+            )
+        
+        # Check batch size limit
+        if len(text_list) > MAX_BATCH_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Too many texts in batch: {len(text_list)} (maximum: {MAX_BATCH_SIZE})"
             )
         
         # Validate each text
